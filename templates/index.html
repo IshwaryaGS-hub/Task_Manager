@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Task Manager</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <script>
+        // Restore dark mode preference from localStorage
+        if (localStorage.theme === "dark") {
+            document.documentElement.classList.add("dark");
+        }
+    </script>
+</head>
+
+<body class="bg-gray-100 dark:bg-gray-900 min-h-screen flex items-center justify-center p-6">
+
+    <div class="bg-white dark:bg-gray-800 shadow-xl p-6 rounded-2xl w-full max-w-lg">
+
+        <!-- Header -->
+        <div class="flex justify-between items-center mb-5">
+            <h1 class="text-3xl font-bold text-indigo-600 dark:text-indigo-400">
+                Task Manager
+            </h1>
+
+            <!-- Dark Mode Toggle -->
+            <button onclick="toggleDarkMode()"
+                class="p-2 bg-gray-200 dark:bg-gray-700 rounded-lg hover:scale-110 transition">
+                🌙
+            </button>
+        </div>
+
+        <!-- Filters -->
+        <div class="flex gap-3 mb-5">
+            <a href="/?filter=all"
+                class="px-4 py-2 rounded-lg text-sm font-semibold
+                {% if filter_type=='all' %} bg-indigo-600 text-white {% else %} bg-gray-200 dark:bg-gray-700 dark:text-white {% endif %}">
+                All
+            </a>
+
+            <a href="/?filter=active"
+                class="px-4 py-2 rounded-lg text-sm font-semibold
+                {% if filter_type=='active' %} bg-indigo-600 text-white {% else %} bg-gray-200 dark:bg-gray-700 dark:text-white {% endif %}">
+                Active
+            </a>
+
+            <a href="/?filter=completed"
+                class="px-4 py-2 rounded-lg text-sm font-semibold
+                {% if filter_type=='completed' %} bg-indigo-600 text-white {% else %} bg-gray-200 dark:bg-gray-700 dark:text-white {% endif %}">
+                Completed
+            </a>
+        </div>
+
+        <!-- Add Task Form -->
+        <form action="/add" method="POST" class="flex mb-4 gap-2">
+            <input type="text" name="task" placeholder="Enter task..."
+                class="flex-grow border dark:border-gray-600 rounded-lg p-3 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                required />
+
+            <select name="priority"
+                class="border dark:border-gray-600 p-3 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                <option value="low">🟢 Low</option>
+                <option value="medium">🟡 Medium</option>
+                <option value="high">🔴 High</option>
+            </select>
+
+            <button class="bg-indigo-600 text-white px-5 rounded-lg hover:bg-indigo-700">
+                Add
+            </button>
+        </form>
+
+        <!-- Task List -->
+        <ul>
+            {% for task in tasks %}
+            <li class="flex justify-between items-center bg-gray-100 dark:bg-gray-700 p-3 rounded-lg mb-2 shadow-sm">
+
+                <!-- Title & Priority -->
+                <div>
+                    <p class="font-semibold 
+                    {% if task.completed %} line-through text-gray-400 {% endif %}
+                    dark:text-white">
+
+                        {{ task.title }}
+
+                        <span class="
+                            text-xs px-2 py-1 rounded ml-2
+                            {% if task.priority == 'high' %} bg-red-200 text-red-700 {% endif %}
+                            {% if task.priority == 'medium' %} bg-yellow-200 text-yellow-700 {% endif %}
+                            {% if task.priority == 'low' %} bg-green-200 text-green-700 {% endif %}
+                        ">
+                            {{ task.priority|capitalize }}
+                        </span>
+                    </p>
+                </div>
+
+                <!-- Controls -->
+                <div class="flex items-center gap-3">
+
+                    <!-- Toggle Complete -->
+                    <a href="/toggle/{{ loop.index0 }}"
+                        class="text-green-600 dark:text-green-400 text-xl hover:scale-110 transition">
+                        {% if task.completed %}✔{% else %}○{% endif %}
+                    </a>
+
+                    <!-- Edit (Using data attributes — FIXED, no errors) -->
+                    <button class="editBtn text-blue-600 dark:text-blue-400 hover:scale-110 text-xl"
+                        data-index="{{ loop.index0 }}"
+                        data-title="{{ task.title | escape }}"
+                        data-priority="{{ task.priority | escape }}">
+                        ✏
+                    </button>
+
+                    <!-- Delete -->
+                    <a href="/delete/{{ loop.index0 }}"
+                        class="text-red-600 dark:text-red-400 hover:scale-110 text-xl font-bold">
+                        ✖
+                    </a>
+                </div>
+            </li>
+            {% endfor %}
+        </ul>
+
+    </div>
+
+    <!-- Edit Task Modal -->
+    <div id="editModal"
+        class="hidden fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center p-4">
+
+        <div class="bg-white dark:bg-gray-800 p-6 rounded-xl w-full max-w-md">
+            <h3 class="text-xl font-bold mb-4 dark:text-white">Edit Task</h3>
+
+            <form id="editForm" method="POST">
+
+                <input id="editTitle" name="new_title" type="text"
+                    class="w-full p-3 border rounded-lg dark:bg-gray-700 dark:text-white mb-4">
+
+                <select id="editPriority" name="new_priority"
+                    class="w-full p-3 border rounded-lg dark:bg-gray-700 dark:text-white mb-4">
+                    <option value="low">🟢 Low</option>
+                    <option value="medium">🟡 Medium</option>
+                    <option value="high">🔴 High</option>
+                </select>
+
+                <button class="bg-indigo-600 text-white px-4 py-2 rounded-lg w-full">Save</button>
+            </form>
+
+            <button onclick="closeEditModal()"
+                class="mt-3 text-center w-full text-gray-600 dark:text-gray-300">
+                Cancel
+            </button>
+        </div>
+    </div>
+
+    <!-- JS -->
+    <script>
+        // Toggle Dark Mode
+        function toggleDarkMode() {
+            document.documentElement.classList.toggle("dark");
+            localStorage.theme =
+                document.documentElement.classList.contains("dark")
+                    ? "dark"
+                    : "light";
+        }
+
+        // Open Edit Modal
+        function openEditModal(index, title, priority) {
+            document.getElementById("editModal").classList.remove("hidden");
+
+            document.getElementById("editTitle").value = title;
+            document.getElementById("editPriority").value = priority;
+
+            document.getElementById("editForm").action = `/edit/${index}`;
+        }
+
+        // Close Modal
+        function closeEditModal() {
+            document.getElementById("editModal").classList.add("hidden");
+        }
+
+        
+        document.querySelectorAll(".editBtn").forEach(btn => {
+            btn.addEventListener("click", () => {
+                openEditModal(
+                    btn.dataset.index,
+                    btn.dataset.title,
+                    btn.dataset.priority
+                );
+            });
+        });
+    </script>
+
+</body>
+
+</html>
