@@ -89,9 +89,13 @@ gunicorn app:app
 ## Future Enhancements
 
 🔹 Add user authentication
+
 🔹 Add database support (SQLite/PostgreSQL)
+
 🔹 Add task categories or tags
+
 🔹 Add priority levels
+
 🔹 Add API endpoints for mobile integration
 
 
